@@ -19,6 +19,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Slim\CallableResolver;
+use Slim\Routing\RouteContext;
 use Slim\Routing\RouteCollector;
 use Slim\Routing\RouteResolver;
 use Slim\Factory\AppFactory;
@@ -67,11 +68,11 @@ class TokenAuthenticationTest extends TestCase
 
     /**
      * @dataProvider invalidCallables
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessageRegExp /authenticator.+not.+setted/i
      */
     public function test_exception_when_authenticator_is_not_especified()
     {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectErrorMessageMatches('/authenticator.+not.+setted/i');
         new TokenAuthentication([]);
     }
 
@@ -92,11 +93,11 @@ class TokenAuthenticationTest extends TestCase
 
     /**
      * @dataProvider invalidCallables
-     * @expectedException \TypeError
-     * @expectedExceptionMessageRegExp /must be.+callable/
      */
     public function test_exception_when_authenticator_is_not_callable($invalid_callable)
     {
+        $this->expectError(\TypeError::class);
+        $this->expectErrorMessageMatches('/must be.+callable/');
         new TokenAuthentication([
             'authenticator' => $invalid_callable
         ]);
@@ -104,11 +105,11 @@ class TokenAuthenticationTest extends TestCase
 
     /**
      * @dataProvider invalidCallables
-     * @expectedException \TypeError
-     * @expectedExceptionMessageRegExp /must be.+callable/
      */
     public function test_exception_when_error_is_not_callable($invalid_callable)
     {
+        $this->expectError(\TypeError::class);
+        $this->expectErrorMessageMatches('/must be.+callable/');
         new TokenAuthentication([
             'authenticator' => [$this, 'validAuthenticator'],
             'error' => $invalid_callable
@@ -157,9 +158,9 @@ class TokenAuthenticationTest extends TestCase
         );
 
         $request = $request
-            ->withAttribute('routingResults', $routingResults)
-            ->withAttribute('routeParser', $routeCollector->getRouteParser())
-            ->withAttribute('route', $route);
+            ->withAttribute(RouteContext::ROUTING_RESULTS, $routingResults)
+            ->withAttribute(RouteContext::ROUTE_PARSER, $routeCollector->getRouteParser())
+            ->withAttribute(RouteContext::ROUTE, $route);
 
         $response = $auth->process($request, $handler);
 
@@ -227,9 +228,9 @@ class TokenAuthenticationTest extends TestCase
         );
 
         $request = $request
-            ->withAttribute('routingResults', $routingResults)
-            ->withAttribute('routeParser', $routeCollector->getRouteParser())
-            ->withAttribute('route', $route);
+            ->withAttribute(RouteContext::ROUTING_RESULTS, $routingResults)
+            ->withAttribute(RouteContext::ROUTE_PARSER, $routeCollector->getRouteParser())
+            ->withAttribute(RouteContext::ROUTE, $route);
 
         $response = $auth->process($request, $handler);
 
@@ -492,7 +493,7 @@ class TokenAuthenticationTest extends TestCase
         $response = $auth->process($request, new ResponseInitHandler());
 
         $this->assertEquals(401, $response->getStatusCode());
-        $this->assertRegExp('/Required HTTPS/', json_decode((string) $response->getBody())->message);
+        $this->assertMatchesRegularExpression('/Required HTTPS/', json_decode((string) $response->getBody())->message);
     }
 
     public function test_should_return_200_when_not_using_https_in_localhost()

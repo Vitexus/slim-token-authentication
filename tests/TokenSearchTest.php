@@ -66,10 +66,11 @@ class TokenSearchTest extends TestCase
     }
 
     /**
-     * @expectedException Dyorg\TokenAuthentication\Exceptions\TokenNotFoundException
+     * @covers \Dyorg\TokenAuthentication\TokenSearch::getToken
      */
     public function test_exception_when_token_not_found()
     {
+        $this->expectException(\Dyorg\TokenAuthentication\Exceptions\TokenNotFoundException::class);
         $request = (ServerRequestCreatorFactory::create())->createServerRequestFromGlobals();
 
         (new TokenSearch([]))->getToken($request);
