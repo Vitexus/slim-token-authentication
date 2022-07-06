@@ -4,3 +4,4 @@ composer.lock
 
 # PHPUnit cache files
 .phpunit.result.cache
+/.phpunit.cache/

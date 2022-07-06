@@ -41,4 +41,11 @@ jobs:
         run: composer install --no-progress --prefer-dist --no-interaction --optimize-autoloader
 
       - name: Run unit tests
-        run: vendor/bin/phpunit -c phpunit.xml.dist
+        run: vendor/bin/phpunit -c phpunit.xml.dist --coverage-clover=clover.xml
+
+      - name: Upload coverage results to Coveralls
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          composer global require php-coveralls/php-coveralls -n
+          php-coveralls --coverage_clover=clover.xml --json_path=coveralls-upload.json -v
