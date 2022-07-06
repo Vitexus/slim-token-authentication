@@ -12,6 +12,9 @@ namespace Dyorg\TokenAuthentication;
 use PHPUnit\Framework\TestCase;
 use Slim\Factory\ServerRequestCreatorFactory;
 
+/**
+ * @coversDefaultClass \Dyorg\TokenAuthentication\TokenSearch
+ */
 class TokenSearchTest extends TestCase
 {
     private static $token = 'VGhpcyBpcyBzb21lIHRleHQgdG8gY29udmVydCB2aWEgQ3J5cHQu';

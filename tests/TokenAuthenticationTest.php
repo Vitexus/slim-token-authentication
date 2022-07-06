@@ -25,6 +25,9 @@ use Slim\Routing\RouteResolver;
 use Slim\Factory\AppFactory;
 use Slim\Factory\ServerRequestCreatorFactory;
 
+/**
+ * @coversDefaultClass \Dyorg\TokenAuthentication
+ */
 class TokenAuthenticationTest extends TestCase
 {
     private static $token = 'VGhpcyBpcyBzb21lIHRleHQgdG8gY29udmVydCB2aWEgQ3J5cHQu';
@@ -114,6 +117,29 @@ class TokenAuthenticationTest extends TestCase
             'authenticator' => [$this, 'validAuthenticator'],
             'error' => $invalid_callable
         ]);
+    }
+
+    /**
+     * @covers ::errorHandler
+     */
+    public function test_exception_when_error_returns_invalid_type()
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Error function must return a ResponseInterface object type.');
+        $request = (ServerRequestCreatorFactory::create())->createServerRequestFromGlobals()
+            ->withHeader('Authorization', 'Bearer unknown');
+        $uri = $request->getUri()->withScheme('https')->withHost('example.com')->withPath('/api');
+        $request = $request->withUri($uri);
+
+        $auth = new TokenAuthentication([
+            'authenticator' => [$this, 'validAuthenticator'],
+            'path' => '/api',
+            'error' => function (ServerRequestInterface $req, ResponseInterface $res, UnauthorizedExceptionInterface $ex) {
+                return [];
+            },
+        ]);
+
+        $auth->process($request, new ResponseTokenHandler());
     }
 
     public function test_should_authenticate_when_matches_path()
