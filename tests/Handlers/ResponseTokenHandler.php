@@ -8,7 +8,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Slim\Factory\AppFactory;
 
-class ResponseTokenHandler implements RequestHandlerInterface
+final class ResponseTokenHandler implements RequestHandlerInterface
 {
     protected $attributeName = 'authorization';
 
