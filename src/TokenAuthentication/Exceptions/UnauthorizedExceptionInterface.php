@@ -3,15 +3,15 @@
 /*
  * This file is part of Slim Token Authentication Middleware
  *
- * Copyright (c) 2016 Dyorg Almeida
+ * Copyright (c) 2016-2018 Dyorg Washington G. Almeida
  *
  * Licensed under the MIT license
  * http://www.opensource.org/licenses/mit-license.php
  */
 
-namespace Slim\Middleware\TokenAuthentication;
+namespace Dyorg\TokenAuthentication\Exceptions;
 
-interface UnauthorizedExceptionInterface
+interface UnauthorizedExceptionInterface extends \Throwable
 {
 
 }

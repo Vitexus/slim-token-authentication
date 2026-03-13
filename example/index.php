@@ -1,36 +1,43 @@
 <?php
+declare(strict_types=1);
 
-require_once 'vendor/autoload.php';
+require_once '../vendor/autoload.php';
 
-use Slim\App;
-use Slim\Middleware\TokenAuthentication;
+use Dyorg\TokenAuthentication;
+use Dyorg\TokenAuthentication\Example\App\AuthService;
+use Dyorg\TokenAuthentication\TokenSearch;
+use Psr\Http\Message\ServerRequestInterface;
+use Slim\Factory\AppFactory;
 
-$config = [
-    'settings' => [
-        'displayErrorDetails' => true
-    ]
-];
+// Instantiate App
+$app = AppFactory::create();
 
-$app = new App($config);
+// Add error middleware
+$app->addErrorMiddleware(true, true, true);
 
-$authenticator = function($request, TokenAuthentication $tokenAuth){
+$authenticator = function(ServerRequestInterface &$request, TokenSearch $tokenSearch) {
 
     /**
      * Try find authorization token via header, parameters, cookie or attribute
      * If token not found, return response with status 401 (unauthorized)
      */
-    $token = $tokenAuth->findToken($request);
+    $token = $tokenSearch->getToken($request);
 
     /**
      * Call authentication logic class
      */
-    $auth = new \app\Auth();
+    $auth = new AuthService();
 
     /**
      * Verify if token is valid on database
      * If token isn't valid, must throw an UnauthorizedExceptionInterface
      */
-    $auth->getUserByToken($token);
+    $user = $auth->getUserByToken($token);
+
+    /**
+     * Set authenticated user at attibutes
+     */
+    $request = $request->withAttribute('authenticated_user', $user);
 
 };
 
@@ -38,16 +45,24 @@ $authenticator = function($request, TokenAuthentication $tokenAuth){
  * Add token authentication middleware
  */
 $app->add(new TokenAuthentication([
-    'path' =>   '/restrict',
-    'authenticator' => $authenticator
+    'path' => '/restrict',
+    'authenticator' => $authenticator,
+    'relaxed' => [
+        'localhost',
+        '127.0.0.1',
+        'slim-token-authentication.local'
+    ]
 ]));
 
 /**
  * Public route example
  */
 $app->get('/', function($request, $response){
-    $output = ['msg' => 'It is a public area'];
-    $response->withJson($output, 200, JSON_PRETTY_PRINT);
+    $output = ['message' => 'It\'s a public area'];
+    $response->getBody()->write(json_encode($output));
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus(200);
 });
 
 /**
@@ -55,8 +70,11 @@ $app->get('/', function($request, $response){
  * Our token is "usertokensecret"
  */
 $app->get('/restrict', function($request, $response){
-    $output = ['msg' => 'It\'s a restrict area. Token authentication works!'];
-    $response->withJson($output, 200, JSON_PRETTY_PRINT);
+    $output = ['message' => 'It\'s a restrict area. Token authentication works!'];
+    $response->getBody()->write(json_encode($output));
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus(200);
 });
 
 $app->run();

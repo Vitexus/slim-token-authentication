@@ -1,14 +1,24 @@
 # Slim Token Authentication
 
-This is a Token Authentication Middleware for Slim 3.0+. 
+[![Latest Version](https://img.shields.io/github/release/dyorg/slim-token-authentication.svg?style=flat-square)](https://github.com/dyorg/slim-token-authentication/releases)
+[![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
+[![Build Status](https://travis-ci.com/dyorg/slim-token-authentication.svg?branch=1.x)](https://travis-ci.com/dyorg/slim-token-authentication)
+[![Coverage Status](https://img.shields.io/scrutinizer/coverage/g/dyorg/slim-token-authentication.svg?style=flat-square)](https://scrutinizer-ci.com/g/dyorg/slim-token-authentication/code-structure)
+[![Quality Score](https://img.shields.io/scrutinizer/g/dyorg/slim-token-authentication.svg?style=flat-square)](https://scrutinizer-ci.com/g/dyorg/slim-token-authentication)
+[![Total Downloads](https://img.shields.io/packagist/dt/dyorg/slim-token-authentication.svg?style=flat-square)](https://packagist.org/packages/dyorg/slim-token-authentication)
+
+This is a Token Authentication Middleware for Slim 4.0+.  
 This middleware was designed to maintain easy to implement token authentication with custom authenticator.  
+
+Slim Token Authentication [1.x version](https://github.com/dyorg/slim-token-authentication/tree/1.x) requires PHP 7.1 ou newer.  
+For oldest PHP version you can use [0.x version](https://github.com/dyorg/slim-token-authentication/tree/0.x).
 
 ## Installing
 
 Get the latest version with [Composer](http://getcomposer.org "Composer").
 
 ```bash
-composer require dyorg/slim-token-authentication
+composer require dyorg/slim-token-authentication "^1.0"
 ```
 
 ## Getting authentication
@@ -18,18 +28,30 @@ When you create a new instance of `TokenAuthentication` you must pass an array w
 You need setting authenticator and path options for authentication to start working.
 
 ```php
-$authenticator = function($request, TokenAuthentication $tokenAuth){
+$authenticator = function(ServerRequestInterface &$request, TokenSearch $tokenSearch) {
 
-    # Search for token on header, parameter, cookie or attribute
-    $token = $tokenAuth->findToken($request);
-    
-    # Your method to make token validation
-    $user = User::auth_token($token);
-    
-    # If occured ok authentication continue to route
-    # before end you can storage the user informations or whatever
-    ...
-    
+    /**
+     * Try search authorization token via header, parameters, cookie or attribute
+     * If token not found, return response with status 401 (unauthorized)
+     */
+    $token = $tokenSearch->getToken($request);
+
+    /**
+     * Call authentication logic class
+     */
+    $auth = new AuthService();
+
+    /**
+     * Verify if token is valid on database
+     * If token isn't valid, must throw an UnauthorizedExceptionInterface
+     */
+    $user = $auth->getUserByToken($token);
+
+    /**
+     * Set authenticated user at attibutes (optional)
+     */
+    $request = $request->withAttribute('authenticated_user', $user);
+
 };
 
 $app = new App();
@@ -40,9 +62,9 @@ $app->add(new TokenAuthentication([
 ]));
 ```
 
-### Find Token
+### Getting Token
 
-This middleware contains the method `findToken()`, you can access it from your authenticator method through the second param (`TokenAuthentication` instance). 
+Inside your authenticator clousure, do you can call `getToken` through `TokenSearch` object. 
 This method is able to search for authentication token on header, parameter, cookie or attribute.
 You can configure it through options settings.
 
@@ -64,9 +86,9 @@ $app->add(new TokenAuthentication([
 ]));
 ```
 
-### Passthrough
+### Except
 
-You can configure which routes do not require authentication, setting it on `passthrough` option.
+You can configure which routes do not require authentication, setting it on `except` option.
 
 ```php
 ...
@@ -75,14 +97,14 @@ $app = new App();
 
 $app->add(new TokenAuthentication([
     'path' => '/api',
-    'passthrough' => '/api/auth', /* or ['/api/auth', '/api/test'] */
+    'except' => '/api/auth', /* or ['/api/auth', '/api/test'] */
     'authenticator' => $authenticator
 ]));
 ```
 
 ### Header
 
-By default middleware tries to find token from `Authorization` header. You can change header name using `header` option.
+By default middleware tries to search token from `Authorization` header. You can change header name using `header` option.
 Is expected in Authorization header the value format as `Bearer <token>`, it is matched using a regular expression. 
 If you want to work without token type or with other token type, like `Basic <token>`, 
 you can change the regular expression pattern setting it on `regex` option.
@@ -99,25 +121,9 @@ $app->add(new TokenAuthentication([
 ]));
 ```
 
-### Parameter
-
-If token is not found in header, middleware tries to find `authorization` query parameter. 
-You can change parameter name using `parameter` option. 
-You can disable authentication via parameter by setting `parameter` option as null.
-
-```php
-...
-
-$app->add(new TokenAuthentication([
-    'path' => '/api',
-    'authenticator' => $authenticator,
-    'parameter' => 'token'
-]));
-```
-
 ### Cookie
 
-If token is not found yet, middleware tries to find `authorization` cookie. 
+If token is not found into headers, middleware tries to find `authorization` cookie. 
 You can change cookie name using `cookie` option. 
 You can disabled authentication via cookie by setting `cookie` option as null.
 
@@ -131,11 +137,13 @@ $app->add(new TokenAuthentication([
 ]));
 ```
 
-### Argument
+### Parameter
 
-As a last resort, middleware tries to find `authorization` argument of route.
-You can change argument name using `argument` option. 
-You can disabled authentication via argument by setting `argument` option as null.
+As a last resort, middleware tries to find `authorization` query parameter. 
+You can change parameter name using `parameter` option. 
+You can disable authentication via parameter by setting `parameter` option as null.
+
+Be Careful! User tokens shouldn't be send by parameters in production environment, it's represent a potential security risk. Prefer use header or cookie options. 
 
 ```php
 ...
@@ -143,9 +151,31 @@ You can disabled authentication via argument by setting `argument` option as nul
 $app->add(new TokenAuthentication([
     'path' => '/api',
     'authenticator' => $authenticator,
-    'argument' => 'token'
+    'parameter' => 'token'
 ]));
 ```
+
+### Attribute
+
+When token is found, it's storage into `authorization_token` attribute of ` ServerRequestInterface : $request` object. This behavior enables you to recovery the token posterioly on your application.
+
+```bash 
+$token = $request->getAttribute('authorization_token');
+```
+
+You can change attribute name using `attribute` option. 
+You can disabled the storing of token on the attributes by setting `attribute` option to null.
+
+```php
+...
+
+$app->add(new TokenAuthentication([
+    'path' => '/api',
+    'authenticator' => $authenticator,
+    'attribute' => 'token'
+]));
+```
+
 
 ### Error
 
@@ -155,15 +185,19 @@ You can customize it by setting a callable function on `error` option.
 ```php
 ...
 
-$error = function($request, $response, TokenAuthentication $tokenAuth) {
-    $output = [];
-    $output['error'] = [
-        'msg' => $tokenAuth->getResponseMessage(),
-        'token' => $tokenAuth->getResponseToken(),
-        'status' => 401,
-        'error' => true
+$error = function(ServerRequestInterface $request, ResponseInterface $response, UnauthorizedExceptionInterface $exception) {
+    
+    $output = [
+        'message' => $exception->getMessage(),
+        'token' => $request->getAttribute('authorization_token'),
+        'success' => false
     ];
-    return $response->withJson($output, 401);
+    
+    $response->getBody()->write(json_encode($output));
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus(401);
+    
 }
 
 $app = new App();
@@ -175,7 +209,7 @@ $app->add(new TokenAuthentication([
 ]));
 ```
 
-This error function is called when `TokenAuthentication` catches a throwable class that implements `UnauthorizedExceptionInterface`.
+This error function is called when `TokenAuthentication` catches a throwable class that implements `UnauthorizedExceptionInterface`, or when your authenticator method returns `false`.
 
 ### Secure
 
@@ -204,7 +238,7 @@ $app->add(new TokenAuthentication([
     'path' => '/api',
     'authenticator' => $authenticator,
     'secure' => true,
-    'relaxed' => ['localhost', 'your-app.dev']
+    'relaxed' => ['localhost', 'my-application.local']
 ]));
 ```
 

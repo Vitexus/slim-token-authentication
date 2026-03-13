@@ -1,0 +1,19 @@
+Source: php-dyorg-slim-token-authentication
+Section: php
+Priority: optional
+Maintainer: Vítězslav Dvořák <info@vitexsoftware.cz>
+Build-Depends:
+ debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Homepage: https://github.com/dyorg/slim-token-authentication
+Rules-Requires-Root: no
+
+Package: php-dyorg-slim-token-authentication
+Architecture: all
+Multi-Arch: foreign
+Depends:
+ ${misc:Depends}
+Description: Slim 4 Token Authentication Middleware
+ Token-based authentication middleware for the Slim 4 PHP framework.
+ Provides flexible token authentication with customizable token search
+ and authorization callbacks.
